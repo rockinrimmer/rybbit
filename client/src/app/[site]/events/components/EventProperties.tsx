@@ -4,9 +4,8 @@ import NumberFlow from "@number-flow/react";
 import { Info } from "lucide-react";
 import { memo } from "react";
 import { EventProperty } from "../../../../api/analytics/events/useGetEventProperties";
-import { cn, getCountryName } from "../../../../lib/utils";
+import { cn } from "../../../../lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { CountryFlag } from "@/app/[site]/components/shared/icons/CountryFlag";
 
 interface EventPropertiesProps {
   properties: EventProperty[];
