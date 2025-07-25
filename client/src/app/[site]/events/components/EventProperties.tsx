@@ -63,9 +63,6 @@ export function EventProperties({
     return sumB - sumA;
   });
 
-  // Find the highest count to calculate percentages for values
-  const maxCount = Math.max(...properties.map((prop) => prop.count));
-
   return (
     <div
       className={cn(
@@ -93,7 +90,9 @@ export function EventProperties({
             {/* Property Values */}
             <div className="pl-4 flex flex-col gap-2">
               {values.map((property) => {
-                const percentage = (property.count / maxCount) * 100;
+                const totalCount = properties.filter(event => event.propertyKey === property.propertyKey)
+                  .reduce((sum, event) => sum + event.count, 0);
+                const percentage = (property.count / totalCount) * 100;
 
                 return (
                   <div
