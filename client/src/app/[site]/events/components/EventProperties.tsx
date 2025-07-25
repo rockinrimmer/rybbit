@@ -4,7 +4,9 @@ import NumberFlow from "@number-flow/react";
 import { Info } from "lucide-react";
 import { memo } from "react";
 import { EventProperty } from "../../../../api/analytics/events/useGetEventProperties";
-import { cn } from "../../../../lib/utils";
+import { cn, getCountryName } from "../../../../lib/utils";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { CountryFlag } from "@/app/[site]/components/shared/icons/CountryFlag";
 
 interface EventPropertiesProps {
   properties: EventProperty[];
@@ -108,7 +110,18 @@ export function EventProperties({
                     ></div>
                     <div className="z-10 flex justify-between items-center w-full">
                       <div className="truncate max-w-[70%]">
-                        {property.propertyValue}
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <div className="flex items-center">
+                              {property.propertyValue}
+                            </div>
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p className="max-w-7xl">
+                              {property.propertyValue}
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
                       </div>
                       <div className="flex gap-2">
                         <div className="hidden group-hover:block text-neutral-400">
