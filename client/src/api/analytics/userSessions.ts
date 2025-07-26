@@ -113,6 +113,14 @@ export interface SessionDetails {
   exit_page: string;
 }
 
+export interface SessionEventProps {
+  [key: string]: unknown;
+
+  // Error-specific props
+  message?: string;
+  stack?: string;
+}
+
 export interface SessionEvent {
   timestamp: string;
   pathname: string;
@@ -122,7 +130,7 @@ export interface SessionEvent {
   referrer: string;
   type: string;
   event_name?: string;
-  props?: any;
+  props?: SessionEventProps;
 }
 
 export interface SessionPageviewsAndEvents {
