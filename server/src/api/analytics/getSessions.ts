@@ -36,6 +36,7 @@ export type GetSessionsResponse = {
   exit_page: string;
   pageviews: number;
   events: number;
+  errors: number;
 }[];
 
 export interface GetSessionsRequest {
