@@ -19,6 +19,7 @@ export type GetOverviewBucketedResponse = {
   bounce_rate: number;
   session_duration: number;
   users: number;
+  events?: number;
 }[];
 
 export function useGetOverviewBucketed({

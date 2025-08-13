@@ -9,7 +9,8 @@ export type StatType =
   | "users"
   | "pages_per_session"
   | "bounce_rate"
-  | "session_duration";
+  | "session_duration"
+  | "events";
 
 export const SESSION_PAGE_FILTERS: FilterParameter[] = [
   "hostname",

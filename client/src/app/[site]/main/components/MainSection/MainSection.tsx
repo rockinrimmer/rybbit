@@ -20,6 +20,7 @@ const SELECTED_STAT_MAP = {
   bounce_rate: "Bounce Rate",
   session_duration: "Session Duration",
   users: "Users",
+  events: "Custom Events",
 };
 
 const tilt_wrap = Tilt_Warp({
@@ -55,10 +56,15 @@ export function MainSection() {
     periodTime: "previous",
   });
 
-  const maxOfDataAndPreviousData = Math.max(
-    Math.max(...(data?.data?.map((d: any) => d[selectedStat]) ?? [])),
-    Math.max(...(previousData?.data?.map((d: any) => d[selectedStat]) ?? []))
-  );
+  const maxOfDataAndPreviousData =
+    selectedStat === "events"
+      ? 0
+      : Math.max(
+          Math.max(...(data?.data?.map((d: any) => d[selectedStat]) ?? [])),
+          Math.max(
+            ...(previousData?.data?.map((d: any) => d[selectedStat]) ?? [])
+          )
+        );
 
   return (
     <>
