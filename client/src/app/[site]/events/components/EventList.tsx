@@ -3,6 +3,8 @@
 import NumberFlow from "@number-flow/react";
 import { BookOpen, ChevronDown, ChevronRight, Info } from "lucide-react";
 import { memo, useState } from "react";
+import { FilterParameter } from "@rybbit/shared";
+import { addFilter, removeFilter, useStore } from "../../../../lib/store";
 import { EventName } from "../../../../api/analytics/events/useGetEventNames";
 import { useGetEventProperties } from "../../../../api/analytics/events/useGetEventProperties";
 import { NothingFound } from "../../../../components/NothingFound";
@@ -96,8 +98,24 @@ export function EventList({
   size = "small",
 }: EventListProps) {
   const [expandedEvent, setExpandedEvent] = useState<string | null>(null);
+  const filters = useStore((state) => state.filters);
 
-  const handleEventClick = (eventName: string) => {
+  const toggleFilter = (parameter: FilterParameter, value: string) => {
+    const foundFilter = filters.find(
+      (f) => f.parameter === parameter && f.value.some((v) => v === value)
+    );
+    if (foundFilter) {
+      removeFilter(foundFilter);
+    } else {
+      addFilter({
+        parameter,
+        value: [value],
+        type: "equals",
+      });
+    }
+  };
+
+  const toggleExpand = (eventName: string) => {
     setExpandedEvent(expandedEvent === eventName ? null : eventName);
   };
 
@@ -150,7 +168,7 @@ export function EventList({
                 "relative flex items-center cursor-pointer hover:bg-neutral-850 group px-2 rounded-md",
                 size === "small" ? "h-6" : "h-9"
               )}
-              onClick={() => handleEventClick(event.eventName)}
+              onClick={() => toggleFilter("event_name", event.eventName)}
             >
               <div
                 className="absolute inset-0 bg-dataviz py-2 opacity-25 rounded-md"
@@ -167,11 +185,19 @@ export function EventList({
                     <ChevronDown
                       className="h-4 w-4 text-neutral-400 hover:text-neutral-100"
                       strokeWidth={3}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleExpand(event.eventName);
+                      }}
                     />
                   ) : (
                     <ChevronRight
                       className="h-4 w-4 text-neutral-400 hover:text-neutral-100"
                       strokeWidth={3}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        toggleExpand(event.eventName);
+                      }}
                     />
                   )}
                   {event.eventName}

@@ -3,6 +3,8 @@
 import NumberFlow from "@number-flow/react";
 import { Info } from "lucide-react";
 import { memo } from "react";
+import { FilterParameter } from "@rybbit/shared";
+import { addFilter, removeFilter, useStore } from "../../../../lib/store";
 import { EventProperty } from "../../../../api/analytics/events/useGetEventProperties";
 import { cn } from "../../../../lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -20,6 +22,22 @@ export function EventProperties({
   selectedEvent,
   size = "small",
 }: EventPropertiesProps) {
+  const filters = useStore((state) => state.filters);
+
+  const toggleFilter = (parameter: FilterParameter, value: string) => {
+    const foundFilter = filters.find(
+      (f) => f.parameter === parameter && f.value.some((v) => v === value)
+    );
+    if (foundFilter) {
+      removeFilter(foundFilter);
+    } else {
+      addFilter({
+        parameter,
+        value: [value],
+        type: "equals",
+      });
+    }
+  };
   if (isLoading) {
     return <EventPropertiesSkeleton size={size} />;
   }
@@ -99,9 +117,18 @@ export function EventProperties({
                   <div
                     key={`${property.propertyKey}-${property.propertyValue}`}
                     className={cn(
-                      "relative flex items-center hover:bg-neutral-850 group px-2 rounded-md",
+                      "relative flex items-center hover:bg-neutral-850 group px-2 rounded-md cursor-pointer",
                       size === "small" ? "h-6" : "h-8"
                     )}
+                    onClick={() => {
+                      toggleFilter(
+                        property.propertyKey as unknown as FilterParameter,
+                        property.propertyValue
+                      );
+                      if (selectedEvent) {
+                        toggleFilter("event_name", selectedEvent);
+                      }
+                    }}
                   >
                     <div
                       className="absolute inset-0 bg-dataviz py-2 opacity-25 rounded-md"
