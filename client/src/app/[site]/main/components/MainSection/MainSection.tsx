@@ -56,15 +56,13 @@ export function MainSection() {
     periodTime: "previous",
   });
 
-  const maxOfDataAndPreviousData =
-    selectedStat === "events"
-      ? 0
-      : Math.max(
-          Math.max(...(data?.data?.map((d: any) => d[selectedStat]) ?? [])),
-          Math.max(
-            ...(previousData?.data?.map((d: any) => d[selectedStat]) ?? [])
-          )
-        );
+  const maxOfData = Math.max(
+    ...(data?.data?.map((d: any) => d[selectedStat] ?? 0) ?? [0])
+  );
+  const maxOfPrevious = Math.max(
+    ...(previousData?.data?.map((d: any) => d[selectedStat] ?? 0) ?? [0])
+  );
+  const maxOfDataAndPreviousData = Math.max(maxOfData, maxOfPrevious);
 
   return (
     <>

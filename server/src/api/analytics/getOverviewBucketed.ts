@@ -110,20 +110,19 @@ const getQuery = (params: FilterParams<{ bucket: TimeBucket }>) => {
   const isAllTime = !startDate && !endDate && !pastMinutesRange;
 
   const query = `
-SELECT
-    session_stats.time AS time,
+  SELECT
+    coalesce(session_stats.time, page_stats.time, event_stats.time) AS time,
     session_stats.sessions,
     session_stats.pages_per_session,
     session_stats.bounce_rate * 100 AS bounce_rate,
     session_stats.session_duration,
     page_stats.pageviews,
-    page_stats.users
-FROM 
-(
+    page_stats.users,
+    coalesce(event_stats.events, 0) AS events
+  FROM
+  (
     SELECT
-         toDateTime(${
-           TimeBucketToFn[bucket]
-         }(toTimeZone(start_time, ${SqlString.escape(timeZone)}))) AS time,
+         toDateTime(${TimeBucketToFn[bucket]}(toTimeZone(start_time, ${SqlString.escape(timeZone)}))) AS time,
         COUNT() AS sessions,
         AVG(pages_in_session) AS pages_per_session,
         sumIf(1, pages_in_session = 1) / COUNT() AS bounce_rate,
@@ -137,23 +136,19 @@ FROM
             MAX(timestamp) AS end_time,
             COUNT(*) AS pages_in_session
         FROM events
-        WHERE 
+        WHERE
             site_id = {siteId:Int32}
             ${filterStatement}
             ${getTimeStatement(params)}
             AND type = 'pageview'
         GROUP BY session_id
     )
-    GROUP BY time ORDER BY time ${
-      isAllTime ? "" : getTimeStatementFill(params, bucket)
-    }
-) AS session_stats
-FULL JOIN
-(
+    GROUP BY time ORDER BY time ${isAllTime ? "" : getTimeStatementFill(params, bucket)}
+  ) AS session_stats
+  FULL JOIN
+  (
     SELECT
-         toDateTime(${
-           TimeBucketToFn[bucket]
-         }(toTimeZone(timestamp, ${SqlString.escape(timeZone)}))) AS time,
+         toDateTime(${TimeBucketToFn[bucket]}(toTimeZone(timestamp, ${SqlString.escape(timeZone)}))) AS time,
         COUNT(*) AS pageviews,
         COUNT(DISTINCT user_id) AS users
     FROM events
@@ -162,18 +157,39 @@ FULL JOIN
         ${filterStatement}
         ${getTimeStatement(params)}
         AND type = 'pageview'
-    GROUP BY time ORDER BY time ${
-      isAllTime ? "" : getTimeStatementFill(params, bucket)
-    }
-) AS page_stats
-USING time
-ORDER BY time`;
+    GROUP BY time ORDER BY time ${isAllTime ? "" : getTimeStatementFill(params, bucket)}
+  ) AS page_stats
+  USING time
+  FULL JOIN
+  (
+    SELECT
+         toDateTime(${TimeBucketToFn[bucket]}(toTimeZone(timestamp, ${SqlString.escape(timeZone)}))) AS time,
+        COUNT(*) AS events
+    FROM events
+    WHERE
+        site_id = {siteId:Int32}
+        ${filterStatement}
+        ${getTimeStatement(params)}
+        AND type = 'custom_event'
+    GROUP BY time ORDER BY time ${isAllTime ? "" : getTimeStatementFill(params, bucket)}
+  ) AS event_stats
+  USING time
+  ORDER BY time`;
 
   return query;
 };
 
 
-type getOverviewBucketed = { time: string; pageviews: number }[];
+type getOverviewBucketed = {
+  time: string;
+  sessions: number;
+  pages_per_session: number;
+  bounce_rate: number;
+  session_duration: number;
+  pageviews: number;
+  users: number;
+  events: number;
+}[];
 
 export async function getOverviewBucketed(
   req: FastifyRequest<{
