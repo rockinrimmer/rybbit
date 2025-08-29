@@ -11,15 +11,24 @@ export type EventName = {
   count: number;
 };
 
-export function useGetEventNames() {
+export function useGetEventNames({
+  overrideTime,
+  enabled = true,
+}: {
+  overrideTime?:
+    | { mode: "past-minutes"; pastMinutesStart: number; pastMinutesEnd: number }
+    | { mode: "range"; startDate: string; endDate: string };
+  enabled?: boolean;
+} = {}) {
   const { site, time, filters } = useStore();
 
-  const timeParams = getQueryParams(time);
+  const timeToUse = overrideTime || time;
+  const timeParams = getQueryParams(timeToUse);
   const filteredFilters = getFilteredFilters(EVENT_FILTERS);
 
   return useQuery({
-    queryKey: ["event-names", site, timeParams, filteredFilters],
-    enabled: !!site,
+    queryKey: ["event-names", site, timeToUse, filteredFilters],
+    enabled: !!site && enabled,
     queryFn: () => {
       const params = {
         ...timeParams,

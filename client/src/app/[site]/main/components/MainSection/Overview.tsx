@@ -4,9 +4,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { cn, formatSecondsAsMinutesAndSeconds } from "@/lib/utils";
 import NumberFlow from "@number-flow/react";
 import { TrendingDown, TrendingUp } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useGetOverview } from "../../../../../api/analytics/useGetOverview";
 import { useGetOverviewBucketed } from "../../../../../api/analytics/useGetOverviewBucketed";
+import { useGetEventNames } from "../../../../../api/analytics/events/useGetEventNames";
 import { StatType, useStore } from "../../../../../lib/store";
 import { SparklinesChart } from "./SparklinesChart";
 
@@ -152,7 +153,28 @@ const Stat = ({
 };
 
 export function Overview() {
-  const { site } = useStore();
+  const { site, filters, previousTime, selectedStat, setSelectedStat } =
+    useStore();
+
+  const hasEventFilter = filters.some((f) => f.parameter === "event_name");
+
+  const {
+    data: eventNames,
+    isLoading: isEventNamesLoading,
+  } = useGetEventNames({ enabled: hasEventFilter });
+
+  const {
+    data: previousEventNames,
+    isLoading: isEventNamesLoadingPrevious,
+  } = useGetEventNames({ overrideTime: previousTime, enabled: hasEventFilter });
+
+  useEffect(() => {
+    if (hasEventFilter) {
+      setSelectedStat("events");
+    } else if (selectedStat === "events") {
+      setSelectedStat("pageviews");
+    }
+  }, [hasEventFilter, selectedStat, setSelectedStat]);
 
   // Current period - automatically handles both regular time-based and past-minutes queries
   const {
@@ -172,6 +194,8 @@ export function Overview() {
     });
 
   const isLoading = isOverviewLoading || isOverviewLoadingPrevious;
+  const isEventsLoading =
+    isEventNamesLoading || isEventNamesLoadingPrevious;
 
   const currentUsers = overviewData?.data?.users ?? 0;
   const previousUsers = overviewDataPrevious?.data?.users ?? 0;
@@ -181,6 +205,10 @@ export function Overview() {
 
   const currentPageviews = overviewData?.data?.pageviews ?? 0;
   const previousPageviews = overviewDataPrevious?.data?.pageviews ?? 0;
+
+  const currentEvents = eventNames?.reduce((sum, e) => sum + e.count, 0) ?? 0;
+  const previousEvents =
+    previousEventNames?.reduce((sum, e) => sum + e.count, 0) ?? 0;
 
   const currentPagesPerSession = overviewData?.data?.pages_per_session ?? 0;
   const previousPagesPerSession =
@@ -209,13 +237,23 @@ export function Overview() {
         previous={previousSessions}
         isLoading={isLoading}
       />
-      <Stat
-        title="Pageviews"
-        id="pageviews"
-        value={currentPageviews}
-        previous={previousPageviews}
-        isLoading={isLoading}
-      />
+      {hasEventFilter ? (
+        <Stat
+          title="Custom Events"
+          id="events"
+          value={currentEvents}
+          previous={previousEvents}
+          isLoading={isEventsLoading}
+        />
+      ) : (
+        <Stat
+          title="Pageviews"
+          id="pageviews"
+          value={currentPageviews}
+          previous={previousPageviews}
+          isLoading={isLoading}
+        />
+      )}
       <Stat
         title="Pages per Session"
         id="pages_per_session"
