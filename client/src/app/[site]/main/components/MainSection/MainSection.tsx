@@ -13,6 +13,7 @@ import { Chart } from "./Chart";
 import { Overview } from "./Overview";
 import { PreviousChart } from "./PreviousChart";
 import { RybbitLogo } from "../../../../../components/RybbitLogo";
+import { Switch } from "../../../../../components/ui/switch";
 
 const SELECTED_STAT_MAP = {
   pageviews: "Pageviews",
@@ -31,7 +32,8 @@ const tilt_wrap = Tilt_Warp({
 export function MainSection() {
   const session = authClient.useSession();
 
-  const { selectedStat, time, site, bucket } = useStore();
+  const { selectedStat, time, site, bucket, showUsersSplit, setShowUsersSplit } = useStore();
+  const showUserBreakdown = selectedStat === "users" && showUsersSplit;
 
   // Current period data
   const { data, isFetching, error } = useGetOverviewBucketed({
@@ -56,10 +58,20 @@ export function MainSection() {
     periodTime: "previous",
   });
 
-  const maxOfDataAndPreviousData = Math.max(
-    Math.max(...(data?.data?.map((d: any) => d[selectedStat]) ?? [])),
-    Math.max(...(previousData?.data?.map((d: any) => d[selectedStat]) ?? []))
-  );
+  const activeKeys = showUserBreakdown ? (["new_users", "returning_users"] as const) : ([selectedStat] as const);
+
+  const getMaxValue = (dataset?: { data?: { [key: string]: number }[] }) =>
+    Math.max(
+      ...(
+        dataset?.data?.map(d =>
+          showUserBreakdown
+            ? (d?.["new_users"] ?? 0) + (d?.["returning_users"] ?? 0)
+            : Math.max(...activeKeys.map(key => d?.[key] ?? 0))
+        ) ?? [0]
+      )
+    );
+
+  const maxOfDataAndPreviousData = Math.max(getMaxValue(data), getMaxValue(previousData));
 
   return (
     <>
@@ -69,22 +81,56 @@ export function MainSection() {
         </CardContent>
         {(isOverviewFetching || isOverviewFetchingPrevious) && <CardLoader />}
       </Card>
-      <Card>
+      <Card className="overflow-visible">
         {(isFetching || isPreviousFetching) && <CardLoader />}
         <CardContent className="p-2 md:p-4 py-3 w-full">
-          <div className="flex items-center justify-between px-2 md:px-0">
-            <div className="flex items-center space-x-4">
-              <Link
-                href={session.data ? "/" : "https://rybbit.com"}
-                className={cn("text-lg font-semibold flex items-center gap-1.5 opacity-75", tilt_wrap.className)}
-              >
-                <RybbitLogo width={20} height={20} />
-                rybbit.com
-              </Link>
+          <div className="flex flex-col gap-2 px-2 md:px-0 relative">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-4">
+                <Link
+                  href={session.data ? "/" : "https://rybbit.com"}
+                  className={cn("text-lg font-semibold flex items-center gap-1.5 opacity-75", tilt_wrap.className)}
+                >
+                  <RybbitLogo width={20} height={20} />
+                  rybbit.com
+                </Link>
+              </div>
+              <span className="absolute left-1/2 -translate-x-1/2 text-sm text-neutral-700 dark:text-neutral-200">
+                {SELECTED_STAT_MAP[selectedStat]}
+              </span>
+              <div className="flex items-center gap-3 md:justify-end">
+                {selectedStat === "users" && (
+                  <div className="hidden md:flex items-center gap-2 text-xs text-muted-foreground">
+                    <Switch id="toggle-user-breakdown" checked={showUsersSplit} onCheckedChange={setShowUsersSplit} />
+                    <label className="cursor-pointer" htmlFor="toggle-user-breakdown">
+                      New vs returning
+                    </label>
+                  </div>
+                )}
+                <BucketSelection />
+              </div>
             </div>
-            <span className="text-sm text-neutral-700 dark:text-neutral-200">{SELECTED_STAT_MAP[selectedStat]}</span>
-            <BucketSelection />
+            {selectedStat === "users" && (
+              <div className="flex md:hidden items-center gap-2 text-xs text-muted-foreground justify-end">
+                <Switch id="toggle-user-breakdown" checked={showUsersSplit} onCheckedChange={setShowUsersSplit} />
+                <label className="cursor-pointer" htmlFor="toggle-user-breakdown">
+                  New vs returning
+                </label>
+              </div>
+            )}
           </div>
+          {showUserBreakdown && (
+            <div className="flex items-center justify-center gap-4 text-xs text-muted-foreground px-2 md:px-0 mt-2">
+              <div className="flex items-center gap-2">
+                <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: "hsl(var(--dataviz))" }} />
+                <span>New users</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: "hsl(var(--accent-200))" }} />
+                <span>Returning users</span>
+              </div>
+            </div>
+          )}
           <div className="h-[200px] md:h-[290px] relative">
             <div className="absolute top-0 left-0 w-full h-full">
               <PreviousChart data={previousData} max={maxOfDataAndPreviousData} />
