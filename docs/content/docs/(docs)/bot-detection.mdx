@@ -176,9 +176,9 @@ Because multiple layers can match the same request, per-layer bot counts can add
 
 ## Server-Side Tracking
 
-Requests sent to `/api/track` with `Authorization: Bearer <api key>` and a valid API key are treated as trusted server-side ingestion. Four of the five layers are skipped: the headers, the client signals, the network address, and the request rate all belong to your server, not to the visitor it is reporting, so scoring them would convict your own backend.
+Requests sent to `/api/track` with a verified API key that has `ingest:write` permission for the site are treated as trusted server-side ingestion. Four of the five layers are skipped: the headers, the client signals, the network address, and the request rate all belong to your server, not to the visitor it is reporting, so scoring them would convict your own backend.
 
-The user-agent layer still runs, on the `user_agent` you send. Nothing changes for ordinary backend events — a request reporting a real browser's user agent is tracked normally.
+For backend-generated events, omit `user_agent` (an empty value behaves the same way). Rybbit retains the request's HTTP `User-Agent` for metadata and identity, but does not classify that delivery client as the subject of the event. When you explicitly supply a non-empty `user_agent`, the user-agent layer runs on that value: real browsers are tracked normally, while recognised crawlers are detected. Invalid or under-scoped credentials do not receive the trusted-ingestion exemption.
 
 ### Reporting crawlers that never run JavaScript
 

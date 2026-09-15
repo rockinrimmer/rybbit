@@ -31,6 +31,7 @@ function trackingRequest(overrides: Partial<TrackingRequest> = {}): TrackingRequ
     site,
     ipAddress: "198.51.100.10",
     userAgent: "Mozilla/5.0 (Macintosh) Chrome/120 Safari/537.36",
+    userAgentSource: "request",
     candidateIps: ["198.51.100.10"],
     trustedServerSideIngestion: false,
     headers: {},

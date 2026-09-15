@@ -77,7 +77,20 @@ describe("checkBotBlocking", () => {
       headers: {},
       blockBots: true,
       trustedServerSideIngestion: true,
+      userAgentSource: "request",
       payload: basePayload,
+    });
+
+    expect(result).toBeNull();
+  });
+
+  it("does not classify the reporting HTTP client's user agent for trusted ingestion", async () => {
+    const result = await checkBotBlocking({
+      headers: { "user-agent": "Go-http-client/1.1" },
+      blockBots: true,
+      trustedServerSideIngestion: true,
+      userAgentSource: "request",
+      payload: { ...basePayload, userAgent: "Go-http-client/1.1" },
     });
 
     expect(result).toBeNull();
@@ -90,6 +103,7 @@ describe("checkBotBlocking", () => {
       headers: {},
       blockBots: true,
       trustedServerSideIngestion: true,
+      userAgentSource: "payload",
       payload: { ...basePayload, userAgent: "Mozilla/5.0 Chrome/120 Safari/537.36" },
     });
 
@@ -101,9 +115,11 @@ describe("checkBotBlocking", () => {
       headers: {},
       blockBots: true,
       trustedServerSideIngestion: true,
+      userAgentSource: "payload",
       payload: {
         ...basePayload,
-        userAgent: "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; GPTBot/1.2; +https://openai.com/gptbot",
+        userAgent:
+          "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko); compatible; GPTBot/1.2; +https://openai.com/gptbot",
       },
     });
 
@@ -130,7 +146,8 @@ describe("checkBotBlocking", () => {
       headers: {},
       blockBots: false,
       trustedServerSideIngestion: true,
-      payload: { ...basePayload, userAgent: "ClaudeBot/1.0" },
+      userAgentSource: "payload",
+      payload: { ...basePayload, userAgent: "GPTBot/1.2" },
     });
 
     expect(result).toMatchObject({ isBot: true, enforced: false });
