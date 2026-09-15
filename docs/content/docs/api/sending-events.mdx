@@ -15,7 +15,9 @@ import { Tab, Tabs } from 'fumadocs-ui/components/tabs';
 POST /api/track
 ```
 
-Track pageviews, custom events, performance, and errors from server-side applications, mobile apps, or any platform. An API key is optional but recommended for server-side tracking — it bypasses bot detection and domain validation. IP addresses are resolved to geolocation and user agents are parsed for browser/OS/device info.
+Track pageviews, custom events, performance, and errors from server-side applications, mobile apps, or any platform. An API key is optional but recommended for server-side tracking — a verified key with `ingest:write` permission bypasses domain validation and the bot signals that describe the reporting backend. IP addresses are resolved to geolocation and user agents are parsed for browser/OS/device info.
+
+For a backend-generated event, omit `user_agent`; Rybbit will not treat the HTTP library's `User-Agent` header as evidence that the event itself is bot traffic. Supply `user_agent` only when forwarding the user agent of a visitor or crawler. Explicitly forwarded values are still checked by user-agent bot detection, and detected crawlers are blocked or observed according to the site's bot-blocking setting. Invalid or insufficiently scoped credentials are treated as ordinary untrusted ingestion.
 
 ### Request Body
 
@@ -60,7 +62,7 @@ All parameters are sent in the request body as JSON.
       typeDescription: 'Max 255 chars',
     },
     user_agent: {
-      description: 'Custom user agent string - will be parsed for browser/OS/device info',
+      description: 'Visitor or crawler user agent to parse and, for trusted ingestion, classify for bot detection. Omit for backend-generated events.',
       type: 'string',
       typeDescription: 'Max 512 chars',
     },

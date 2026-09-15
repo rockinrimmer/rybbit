@@ -50,6 +50,8 @@ interface BotBlockingInput {
   headers: IncomingHttpHeaders;
   blockBots: boolean;
   trustedServerSideIngestion?: boolean;
+  /** Where the resolved user agent originated before ingestion. */
+  userAgentSource?: "payload" | "request";
   /**
    * App/mobile site. The UA-pattern and header-heuristic layers are
    * browser-shaped and produce false positives for native SDK traffic, so they
@@ -178,11 +180,7 @@ function buildBotEventProperties(
   };
 }
 
-function getClientSignalResult(
-  payload: BotBlockingPayload,
-  userAgent: string,
-  hasReportableScreen: boolean
-) {
+function getClientSignalResult(payload: BotBlockingPayload, userAgent: string, hasReportableScreen: boolean) {
   const hasClientScore = typeof payload.clientBotScore === "number" && Number.isFinite(payload.clientBotScore);
   const hasClientMask = typeof payload.clientBotSignalMask === "number" && Number.isFinite(payload.clientBotSignalMask);
   const rawMask = hasClientMask ? payload.clientBotSignalMask! : 0;
@@ -286,6 +284,7 @@ export async function checkBotBlocking({
   headers,
   blockBots,
   trustedServerSideIngestion = false,
+  userAgentSource = "request",
   isMobileSite = false,
   payload,
   lookupAsn: asnLookup = lookupAsn,
@@ -300,14 +299,15 @@ export async function checkBotBlocking({
   );
 
   // Trusted server-side ingestion is authenticated first-party traffic that
-  // reports its own IP and user agent on someone else's behalf. Four of the
+  // may report an IP and user agent on someone else's behalf. Four of the
   // five layers are meaningless against it and several would convict it
   // outright: header heuristics read the reporting server's headers, client
   // signals require a browser that never ran, the ASN belongs to whoever is
   // doing the reporting, and rate anomaly would see one origin standing in for
   // its entire audience.
   //
-  // The UA layer is the exception, and the only way Rybbit can see a crawler
+  // The UA layer is the exception when the event explicitly supplies a user
+  // agent, and the only way Rybbit can see a crawler
   // that does not execute JavaScript. `POST /api/track` is the sole ingestion
   // path, so a training crawler that fetches HTML and runs nothing is invisible
   // unless the origin forwards it — and a forwarded `GPTBot` used to land in
@@ -320,6 +320,12 @@ export async function checkBotBlocking({
   // off used to get no evaluation at all, which left it with neither protection
   // nor any record of what it was receiving.
   if (trustedServerSideIngestion) {
+    // The request header identifies the SDK or HTTP client delivering the
+    // event, not necessarily the subject of the event. Classifying it caused
+    // clients such as Go-http-client to turn backend events into bot events.
+    if (userAgentSource !== "payload") {
+      return null;
+    }
     return classifyTrustedIngestion(userAgent, blockBots, clientSignalResult);
   }
 

@@ -78,6 +78,7 @@ function trackingRequest(overrides: Partial<TrackingRequest> = {}): TrackingRequ
     site,
     ipAddress: "198.51.100.10",
     userAgent: "Mozilla/5.0",
+    userAgentSource: "request",
     candidateIps: ["198.51.100.10"],
     trustedServerSideIngestion: false,
     headers: { "user-agent": "Mozilla/5.0" },
@@ -125,6 +126,28 @@ describe("ingestEvent", () => {
         timestamp: "2026-08-14T10:38:37.000Z",
       })
     );
+  });
+
+  it("queues trusted backend events whose user agent came from the HTTP request", async () => {
+    const outcome = await ingestEvent(
+      trackingRequest({
+        trustedServerSideIngestion: true,
+        userAgent: "Go-http-client/1.1",
+        userAgentSource: "request",
+        headers: { "user-agent": "Go-http-client/1.1" },
+      })
+    );
+
+    expect(outcome).toEqual({ status: "tracked", sessionId: "session-alice" });
+    expect(mocks.checkBotBlocking).toHaveBeenCalledWith(
+      expect.objectContaining({
+        trustedServerSideIngestion: true,
+        userAgentSource: "request",
+        payload: expect.objectContaining({ userAgent: "Go-http-client/1.1" }),
+      })
+    );
+    expect(mocks.addPageview).toHaveBeenCalledOnce();
+    expect(mocks.addBotEvent).not.toHaveBeenCalled();
   });
 
   it("passes the resolved request to the Site Exclusion Decision without re-deriving it", async () => {
@@ -241,6 +264,7 @@ describe("ingestEvent", () => {
       trackingRequest({
         headers: { "user-agent": "Mozilla/5.0", "accept-language": "en-US" },
         trustedServerSideIngestion: true,
+        userAgentSource: "payload",
       })
     );
 
@@ -249,6 +273,7 @@ describe("ingestEvent", () => {
         headers: { "user-agent": "Mozilla/5.0", "accept-language": "en-US" },
         blockBots: true,
         trustedServerSideIngestion: true,
+        userAgentSource: "payload",
         isMobileSite: false,
         lookupAsn,
       })

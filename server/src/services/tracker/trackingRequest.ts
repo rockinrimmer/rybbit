@@ -32,6 +32,8 @@ export interface TrackingRequest {
   ipAddress: string;
   /** The authoritative user agent, under the same rule as `ipAddress`. */
   userAgent: string;
+  /** Whether the authoritative user agent came from the event body or HTTP request. */
+  userAgentSource: "payload" | "request";
   /**
    * Every plausible client IP for this request (edge, forwarded hops, socket).
    * Exclusion matching only — over-matching is the safe failure mode there.
@@ -39,7 +41,8 @@ export interface TrackingRequest {
   candidateIps: string[];
   /**
    * A bearer token with `ingest:write` scope for this Site let the payload
-   * override IP and user agent. Bot detection is skipped for these.
+   * override IP and user agent. Only an explicitly reported user agent is
+   * classified for these requests.
    */
   trustedServerSideIngestion: boolean;
   /** Request headers, for the layers that read beyond the user agent. */
@@ -97,13 +100,15 @@ export async function resolveTrackingRequest(
   // Only a trusted bearer may speak for someone else; for everyone else the
   // payload's ip_address/user_agent are ignored rather than trusted.
   const ipAddress = trustedServerSideIngestion ? payload.ip_address || requestIpAddress : requestIpAddress;
-  const userAgent = trustedServerSideIngestion ? payload.user_agent || requestUserAgent : requestUserAgent;
+  const hasPayloadUserAgent = trustedServerSideIngestion && Boolean(payload.user_agent);
+  const userAgent = hasPayloadUserAgent ? payload.user_agent! : requestUserAgent;
 
   return {
     payload,
     site,
     ipAddress,
     userAgent,
+    userAgentSource: hasPayloadUserAgent ? "payload" : "request",
     candidateIps: collectCandidateClientIps(request, [ipAddress, requestIpAddress]),
     trustedServerSideIngestion,
     headers: request.headers,

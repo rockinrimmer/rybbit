@@ -75,6 +75,7 @@ describe("resolveTrackingRequest", () => {
     expect(resolved).toMatchObject({
       ipAddress: "198.51.100.20",
       userAgent: "Mozilla/5.0 Chrome/120 Safari/537.36",
+      userAgentSource: "request",
       trustedServerSideIngestion: false,
       // Exclusion candidates still include everything the request presented.
       candidateIps: ["198.51.100.20", "10.0.0.1", "198.51.100.10"],
@@ -99,10 +100,29 @@ describe("resolveTrackingRequest", () => {
     expect(resolved).toMatchObject({
       ipAddress: "203.0.113.10",
       userAgent: "Mozilla/5.0 Chrome/120 Safari/537.36",
+      userAgentSource: "payload",
       trustedServerSideIngestion: true,
       candidateIps: ["203.0.113.10", "198.51.100.20", "198.51.100.10"],
     });
   });
+
+  it.each([undefined, ""])(
+    "retains the request user agent and its provenance when trusted ingestion reports %s",
+    async userAgent => {
+      mocks.checkApiKey.mockResolvedValue({ valid: true, statements: { ingest: ["write"] } });
+
+      const resolved = await resolveTrackingRequest(
+        request({ authorization: "Bearer sk_test", "user-agent": "Go-http-client/1.1" }),
+        payload({ user_agent: userAgent })
+      );
+
+      expect(resolved).toMatchObject({
+        userAgent: "Go-http-client/1.1",
+        userAgentSource: "request",
+        trustedServerSideIngestion: true,
+      });
+    }
+  );
 
   it("degrades an under-scoped bearer to untrusted client-side traffic", async () => {
     mocks.checkApiKey.mockResolvedValue({
@@ -118,6 +138,7 @@ describe("resolveTrackingRequest", () => {
     expect(resolved).toMatchObject({
       ipAddress: "198.51.100.10",
       trustedServerSideIngestion: false,
+      userAgentSource: "request",
     });
   });
 
